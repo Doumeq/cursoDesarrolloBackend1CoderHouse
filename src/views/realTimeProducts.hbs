@@ -1,0 +1,24 @@
+<h1>RealTimeProducts (WebSocket)</h1>
+
+<form id="form-crear">
+  <label>Titulo <input name="title" required /></label>
+  <label>Descripcon <input name="description" required /></label>
+  <label>Codigo <input name="code" required /></label>
+  <label>Precio <input name="price" type="number" required /></label>
+  <label>Stock <input name="stock" type="number" required /></label>
+  <label>Categoria <input name="category" required /></label>
+  <button type="submit">Crear producto</button>
+</form>
+
+<h3>Listado en tiempo real</h3>
+<ul id="lista-productos">
+  {{#each productos}}
+    <li>
+      <strong>#{{this.id}}</strong> - {{this.title}} (${{this.price}})
+      <button class="btn-eliminar" data-id="{{this.id}}">Eliminar</button>
+    </li>
+  {{/each}}
+</ul>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/realtime.js"></script>

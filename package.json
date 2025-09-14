@@ -1,16 +1,21 @@
 {
-  "name": "cursodesarrollobackend1coderhouse",
+  "name": "NicolasDomeq-Entrega2",
   "version": "1.0.0",
-  "description": "Primera entrega - Domeq",
-  "type": "module",
-  "main": "app.js",
+  "description": "Entrega 2 - Websockets + Handlebars",
+  "main": "index.js",
   "scripts": {
-    "start": "node app.js",
-    "dev": "node --watch app.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
+  "author": "Fernando Nicolas Domeq",
+  "license": "ISC",
   "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.1",
-    "express": "^4.21.2"
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-handlebars": "^7.1.2",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
   }
 }
