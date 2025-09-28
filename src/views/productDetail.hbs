@@ -1,0 +1,49 @@
+<article class="product-detail">
+    <h1>{{producto.title}}</h1>
+    <p class="muted">Categoría: {{producto.category}}</p>
+    <p>{{producto.description}}</p>
+
+    <p class="precio">${{producto.price}}</p>
+    <p>
+        Estado:
+        {{#if producto.status}}Disponible{{else}}Sin stock{{/if}}
+        | Stock: {{producto.stock}}
+    </p>
+
+    {{#if producto.thumbnails}}
+    <div class="thumbs">
+        {{#each producto.thumbnails}}
+        <img src="{{this}}" alt="thumb" />
+        {{/each}}
+    </div>
+    {{/if}}
+
+    <div class="acciones">
+        <button id="btnAddDetail" class="btn btn-primary"
+            data-pid="{{#if producto._id}}{{producto._id}}{{else}}{{producto.id}}{{/if}}">
+            Agregar al carrito
+        </button>
+        <a class="btn" href="/products">← Volver</a>
+    </div>
+</article>
+
+<script>
+    (function () {
+        async function ensureCart() {
+            let cid = localStorage.getItem('cartId');
+            if (!cid) {
+                const resp = await fetch('/api/carts', { method: 'POST' });
+                const data = await resp.json();
+                cid = data.id || data._id;
+                localStorage.setItem('cartId', cid);
+            }
+            return cid;
+        }
+        document.getElementById('btnAddDetail')?.addEventListener('click', async (ev) => {
+            const pid = ev.currentTarget.dataset.pid;
+            const cid = await ensureCart();
+            await fetch(`/api/carts/${cid}/product/${pid}`, { method: 'POST' });
+            alert('Producto agregado 👍');
+        });
+    })();
+</script>

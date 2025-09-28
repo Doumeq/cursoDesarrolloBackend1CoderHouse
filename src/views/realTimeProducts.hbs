@@ -1,24 +1,18 @@
 <h1>RealTimeProducts (WebSocket)</h1>
 
-<form id="form-crear">
-  <label>Titulo <input name="title" required /></label>
-  <label>Descripcon <input name="description" required /></label>
-  <label>Codigo <input name="code" required /></label>
-  <label>Precio <input name="price" type="number" required /></label>
-  <label>Stock <input name="stock" type="number" required /></label>
-  <label>Categoria <input name="category" required /></label>
-  <button type="submit">Crear producto</button>
-</form>
-
-<h3>Listado en tiempo real</h3>
-<ul id="lista-productos">
+<ul id="lista">
   {{#each productos}}
-    <li>
-      <strong>#{{this.id}}</strong> - {{this.title}} (${{this.price}})
-      <button class="btn-eliminar" data-id="{{this.id}}">Eliminar</button>
-    </li>
+    <li>{{this.title}} - ${{this.price}}</li>
   {{/each}}
 </ul>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="/js/realtime.js"></script>
+<script>
+  const socket = io();
+  socket.on('productosActualizados', async () => {
+    const res = await fetch('/api/products');
+    const data = await res.json();
+    const lista = document.getElementById('lista');
+    lista.innerHTML = data.payload.map(p => `<li>${p.title} - $${p.price}</li>`).join('');
+  });
+</script>

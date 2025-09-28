@@ -1,0 +1,62 @@
+<h1>Mi carrito</h1>
+
+<p class="muted">ID carrito: {{carritoId}}</p>
+
+{{#if productos.length}}
+<table class="tabla">
+    <thead>
+        <tr>
+            <th>Producto</th>
+            <th>Precio</th>
+            <th>Cantidad</th>
+            <th>Subtotal</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#each productos}}
+        {{#with this}}
+        <tr>
+            <td>
+                {{#if product.title}}
+                <strong>{{product.title}}</strong><br>
+                <small class="muted">{{product.category}}</small>
+                {{else}}
+                <strong>ID:</strong> {{product}}
+                {{/if}}
+            </td>
+            <td>${{#if product.price}}{{product.price}}{{else}}-{{/if}}</td>
+            <td>
+                <input class="qty" type="number" min="1" value="{{quantity}}"
+                    data-pid="{{#if product._id}}{{product._id}}{{else}}{{product}}{{/if}}">
+                <button class="btn btn-sm btn-actualizar"
+                    data-pid="{{#if product._id}}{{product._id}}{{else}}{{product}}{{/if}}">
+                    Actualizar
+                </button>
+            </td>
+            <td>
+                {{#if product.price}}
+                ${{multiply product.price quantity}}
+                {{else}}-
+                {{/if}}
+            </td>
+            <td>
+                <button class="btn btn-sm btn-danger btn-eliminar"
+                    data-pid="{{#if product._id}}{{product._id}}{{else}}{{product}}{{/if}}">
+                    Eliminar
+                </button>
+            </td>
+        </tr>
+        {{/with}}
+        {{/each}}
+    </tbody>
+</table>
+
+<div class="acciones">
+    <button id="btnVaciar" class="btn btn-danger">Vaciar carrito</button>
+</div>
+{{else}}
+<p>No hay productos en el carrito.</p>
+{{/if}}
+
+<script src="/js/cart.js"></script>

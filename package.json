@@ -1,11 +1,12 @@
 {
-  "name": "NicolasDomeq-Entrega2",
+  "name": "NicolasDomeq-EntregaFinal",
   "version": "1.0.0",
-  "description": "Entrega 2 - Websockets + Handlebars",
+  "description": "Entrega Final",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "start": "node index.js"
   },
   "author": "Fernando Nicolas Domeq",
   "license": "ISC",
@@ -13,6 +14,8 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.2",
     "express-handlebars": "^7.1.2",
+    "mongoose": "^8.6.0",
+    "mongoose-paginate-v2": "^1.9.0",
     "socket.io": "^4.7.5"
   },
   "devDependencies": {

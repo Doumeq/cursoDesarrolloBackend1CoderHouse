@@ -1,8 +1,10 @@
-const { server, PORT } = require("./src/server");
+import 'dotenv/config.js';          
+import { servidorHttp, PORT } from './src/server.js';
 
-server.listen(PORT, () => {
-  console.log(`Servidor escuchando en http://localhost:${PORT}`);
+servidorHttp.listen(PORT, () => {
+  console.log(`Servidor listo en http://localhost:${PORT}`);
 });
+
 
 //Fuentes de guia
 //como conectar Socket.IO con Express y un servidor HTTP "https://socket.io/docs/v4/server-initialization/"
