@@ -1,42 +1,36 @@
-console.log("cliente socket preparad");
-
-const formularioCrear = document.querySelector("#form-crear");
-const listaUl = document.querySelector("#lista-productos");
-const botonEliminarSelector = ".btn-eliminar";
-
 const socket = io();
 
-function renderLista(productos) {
-  listaUl.innerHTML = productos
+const $list = document.getElementById('product-list');
+const $form = document.getElementById('form-create');
+
+function renderList(products) {
+  $list.innerHTML = products
     .map(
-      (producto) => `
+      (p) => `
       <li>
-        <strong>#${producto.id}</strong> - ${producto.title} ($${producto.price})
-        <button class="btn-eliminar" data-id="${producto.id}">Eliminar</button>
+        <strong>#${p.id}</strong> - ${p.title} ($${p.price})
+        <button data-id="${p.id}" class="btn-delete">Eliminar</button>
       </li>`
     )
-    .join("");
+    .join('');
 }
 
-socket.on("productos:actualizados", (productos) => {
-  renderLista(productos);
-});
+socket.on('products:list', renderList);
 
-formularioCrear?.addEventListener("submit", (evento) => {
-  evento.preventDefault();
-  const datos = Object.fromEntries(new FormData(formularioCrear).entries());
-
-  if (datos.price) datos.price = Number(datos.price);
-  if (datos.stock) datos.stock = Number(datos.stock);
-  if (datos.status !== undefined) datos.status = Boolean(datos.status);
-
-  socket.emit("producto:create", datos);
-  formularioCrear.reset();
-});
-
-listaUl?.addEventListener("click", (evento) => {
-  if (evento.target.matches(botonEliminarSelector)) {
-    const idProducto = evento.target.dataset.id;
-    socket.emit("producto:delete", { idProducto });
+$list?.addEventListener('click', (ev) => {
+  const btn = ev.target.closest('.btn-delete');
+  if (btn) {
+    socket.emit('product:delete', btn.dataset.id);
   }
+});
+
+$form?.addEventListener('submit', (ev) => {
+  ev.preventDefault();
+  const formData = new FormData($form);
+  const payload = Object.fromEntries(formData.entries());
+  payload.price = Number(payload.price);
+  payload.stock = Number(payload.stock);
+  payload.status = payload.status === 'true';
+  socket.emit('product:create', payload);
+  $form.reset();
 });

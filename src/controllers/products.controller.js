@@ -1,94 +1,86 @@
-import { ProductoModel } from '../models/product.model.js';
+import { Product } from '../models/product.model.js';
 
-function construirFiltro(queryParam) {
-    if (!queryParam) return {};
-    if (queryParam.includes(':')) {
-        const [campo, valor] = queryParam.split(':');
-        if (campo === 'status') return { status: valor === 'true' };
-        if (campo === 'category') return { category: valor };
-        return {};
+export async function listarProductos(req, res, next) {
+  try {
+    const limiteNum = Math.max(1, parseInt(req.query.limit ?? 10));
+    const paginaNum = Math.max(1, parseInt(req.query.page ?? 1));
+    const ordenar   = req.query.sort;  
+    const query     = req.query.query; 
+
+    const filtro = {};
+    if (query) {
+      if (query === 'true' || query === 'false') filtro.status = (query === 'true');
+      else filtro.category = query;
     }
-    return { category: queryParam };
-}
 
-export async function getProductos(req, res, next) {
-    try {
-        const { limit = 10, page = 1, sort, query } = req.query;
+    const sortOpt = {};
+    if (ordenar === 'asc') sortOpt.price = 1;
+    if (ordenar === 'desc') sortOpt.price = -1;
 
-        const filtro = construirFiltro(String(query ?? ''));
-        const orden = sort === 'asc' ? { price: 1 } : sort === 'desc' ? { price: -1 } : {};
+    const total = await Product.countDocuments(filtro);
+    const totalPages = Math.max(1, Math.ceil(total / limiteNum));
+    const skip = (paginaNum - 1) * limiteNum;
 
-        const opciones = {
-            limit: Number(limit) || 10,
-            page: Number(page) || 1,
-            sort: orden,
-            lean: true
-        };
+    const productos = await Product.find(filtro)
+      .sort(sortOpt)       
+      .skip(skip)          
+      .limit(limiteNum)    
+      .lean();
 
-        const resultado = await ProductoModel.paginate(filtro, opciones);
+    const hasPrevPage = paginaNum > 1;
+    const hasNextPage = paginaNum < totalPages;
 
-        const base = `${req.protocol}://${req.get('host')}${req.baseUrl}${req.path}`;
-        const qs = (p) => `?limit=${opciones.limit}&page=${p}${sort ? `&sort=${sort}` : ''}${query ? `&query=${query}` : ''}`;
+    const buildLink = (page) => {
+      const params = new URLSearchParams({ ...req.query, page, limit: limiteNum });
+      return `${req.protocol}://${req.get('host')}${req.baseUrl}${req.path}?${params.toString()}`;
+    };
 
-        res.json({
-            status: 'success',
-            payload: resultado.docs,
-            totalPages: resultado.totalPages,
-            prevPage: resultado.prevPage,
-            nextPage: resultado.nextPage,
-            page: resultado.page,
-            hasPrevPage: resultado.hasPrevPage,
-            hasNextPage: resultado.hasNextPage,
-            prevLink: resultado.hasPrevPage ? `${base}${qs(resultado.prevPage)}` : null,
-            nextLink: resultado.hasNextPage ? `${base}${qs(resultado.nextPage)}` : null
-        });
-    } catch (error) { 
-        next(error); 
-    }
-}
-
-export async function getProductoPorId(req, res, next) {
-    try {
-        const producto = await ProductoModel.findById(req.params.pid).lean();
-        if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
-        res.json(producto);
-    } catch (error) { 
-        next(error); 
-    }
+    res.json({
+      status: total ? 'success' : 'error',
+      payload: productos,
+      totalPages,
+      prevPage: hasPrevPage ? paginaNum - 1 : null,
+      nextPage: hasNextPage ? paginaNum + 1 : null,
+      page: paginaNum,
+      hasPrevPage,
+      hasNextPage,
+      prevLink: hasPrevPage ? buildLink(paginaNum - 1) : null,
+      nextLink: hasNextPage ? buildLink(paginaNum + 1) : null
+    });
+  } catch (error) { next(error); }
 }
 
 export async function crearProducto(req, res, next) {
-    try {
-        const creado = await ProductoModel.create(req.body);
-        req.app.get('io')?.emit('productosActualizados');
-        res.status(201).json(creado);
-    } catch (error) { 
-        next(error); 
-    }
+  try {
+    const producto = await Product.create(req.body);
+    res.status(201).json(producto);
+  } catch (error) { next(error); }
+}
+
+export async function obtenerProducto(req, res, next) {
+  try {
+    const producto = await Product.findById(req.params.pid).lean();
+    if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
+    res.json(producto);
+  } catch (error) { next(error); }
 }
 
 export async function actualizarProducto(req, res, next) {
-    try {
-        const actualizado = await ProductoModel.findByIdAndUpdate(
-            req.params.pid,
-            { $set: req.body },
-            { new: true, runValidators: true, lean: true }
-        );
-        if (!actualizado) return res.status(404).json({ error: 'Producto no encontrado' });
-        req.app.get('io')?.emit('productosActualizados');
-        res.json(actualizado);
-    } catch (error) { 
-        next(error); 
-    }
+  try {
+    const producto = await Product.findByIdAndUpdate(
+      req.params.pid,
+      req.body,
+      { new: true, runValidators: true }
+    ).lean();
+    if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
+    res.json(producto);
+  } catch (error) { next(error); }
 }
 
 export async function eliminarProducto(req, res, next) {
-    try {
-        const eliminado = await ProductoModel.findByIdAndDelete(req.params.pid).lean();
-        if (!eliminado) return res.status(404).json({ error: 'Producto no encontrado' });
-        req.app.get('io')?.emit('productosActualizados');
-        res.status(204).send();
-    } catch (error) { 
-        next(error); 
-    }
+  try {
+    const eliminado = await Product.findByIdAndDelete(req.params.pid).lean();
+    if (!eliminado) return res.status(404).json({ error: 'Producto no encontrado' });
+    res.status(204).send();
+  } catch (error) { next(error); }
 }

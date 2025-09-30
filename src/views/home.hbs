@@ -1,56 +1,10 @@
-<h1 class="mb-3">Productos</h1>
-
-<form class="filtros" action="/products" method="GET">
-  <label>Buscar (query):
-    <input type="text" name="query" value="{{query}}">
-  </label>
-
-  <label>Ordenar por precio:
-    <select name="sort">
-      <option value="">-- sin orden --</option>
-      <option value="asc" {{#if (eq sort "asc" )}}selected{{/if}}>asc</option>
-      <option value="desc" {{#if (eq sort "desc" )}}selected{{/if}}>desc</option>
-    </select>
-  </label>
-
-  <label>Límite:
-    <input type="number" min="1" name="limit" value="{{limit}}">
-  </label>
-
-  <button type="submit">Aplicar</button>
-</form>
-
-<ul class="product-list">
-  {{#each productos}}
-  <li class="product-card">
-    <h3>{{this.title}}</h3>
-    <p class="muted">Categoría: {{this.category}} | Stock: {{this.stock}}</p>
-    <p class="precio">${{this.price}}</p>
-
-    <div class="acciones">
-      <a class="btn" href="/products/{{#if this._id}}{{this._id}}{{else}}{{this.id}}{{/if}}">Ver detalle</a>
-      <button class="btn btn-primary btn-add" data-pid="{{#if this._id}}{{this._id}}{{else}}{{this.id}}{{/if}}">
-        Agregar al carrito
-      </button>
-    </div>
-  </li>
+<h1>Productos</h1>
+<ul>
+  {{#each products}}
+    <li><strong>#{{this.id}}</strong> - {{this.title}} (${{this.price}})</li>
   {{/each}}
 </ul>
 
-<nav class="paginacion">
-  {{#if paginacion.hasPrevPage}}
-  <a class="btn" href="{{paginacion.prevLink}}">← Anterior</a>
-  {{else}}
-  <span class="btn disabled">← Anterior</span>
-  {{/if}}
-
-  <span>Página {{paginacion.page}} / {{paginacion.totalPages}}</span>
-
-  {{#if paginacion.hasNextPage}}
-  <a class="btn" href="{{paginacion.nextLink}}">Siguiente →</a>
-  {{else}}
-  <span class="btn disabled">Siguiente →</span>
-  {{/if}}
-</nav>
-
-<script src="/js/home.js"></script>
+<p>
+  <a href="/realtimeproducts">Ir a RealTimeProducts</a>
+</p>

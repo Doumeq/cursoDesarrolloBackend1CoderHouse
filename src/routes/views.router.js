@@ -1,13 +1,12 @@
 import { Router } from 'express';
-import {
-  vistaHome, vistaProductos, vistaProductoDetalle,
-  vistaCarrito, vistaRealTime
-} from '../controllers/views.controller.js';
+import { renderHomeView, renderRealTimeView } from '../controllers/products.controller.js';
+import { renderCartView } from '../controllers/carts.controller.js';
 
-export const viewsRouter = Router();
+const router = Router();
 
-viewsRouter.get('/', vistaHome);
-viewsRouter.get('/products', vistaProductos);
-viewsRouter.get('/products/:pid', vistaProductoDetalle);
-viewsRouter.get('/carts/:cid', vistaCarrito);
-viewsRouter.get('/realtimeproducts', vistaRealTime);
+router.get('/', (req, res) => res.redirect('/products'));
+router.get('/products', renderHomeView);
+router.get('/realtimeproducts', renderRealTimeView);
+router.get('/carts/:cid', renderCartView);
+
+export default router;
