@@ -1,121 +1,86 @@
-import { Cart } from "../models/cart.model.js";
-import { Product } from "../models/product.model.js";
+import { CartManager } from '../managers/cart.manager.js';
 
-export async function crearCarrito(req, res, next) {
+const cartManager = new CartManager();
+await cartManager.init();
+
+export async function renderCartView(req, res, next) {
   try {
-    const carrito = await Cart.create({ products: [] });
+    const carrito = await cartManager.getById(req.params.cid);
+    if (!carrito) return res.status(404).render('error', { message: 'Carrito no encontrado' });
+    res.render('cart', { title: `Carrito #${carrito.id}`, carrito });
+  } catch (error) { next(error); }
+}
+
+export async function createCart(req, res, next) {
+  try {
+    const carrito = await cartManager.createCart();
     res.status(201).json(carrito);
-  } catch (error) {
-    next(error);
-  }
+  } catch (error) { next(error); }
 }
 
-export async function obtenerCarrito(req, res, next) {
+export async function getCartById(req, res, next) {
   try {
-    const carrito = await Cart.findById(req.params.cid)
-      .populate("products.product")
-      .lean();
-    if (!carrito)
-      return res.status(404).json({ error: "Carrito no encontrado" });
+    const carrito = await cartManager.getById(req.params.cid);
+    if (!carrito) return res.status(404).json({ error: 'Carrito no encontrado' });
     res.json(carrito);
-  } catch (error) {
-    next(error);
-  }
+  } catch (error) { next(error); }
 }
 
-export async function agregarProductoAlCarrito(req, res, next) {
+export async function addProductToCart(req, res, next) {
   try {
     const { cid, pid } = req.params;
-    const producto = await Product.findById(pid).lean();
-    if (!producto)
-      return res.status(404).json({ error: "Producto no encontrado" });
+    const result = await cartManager.addProduct(cid, pid, 1);
 
-    const carrito = await Cart.findById(cid);
-    if (!carrito)
-      return res.status(404).json({ error: "Carrito no encontrado" });
+    if (result?.error === 'CART_NOT_FOUND') return res.status(404).json({ error: 'Carrito no encontrado' });
+    if (result?.error === 'PRODUCT_NOT_FOUND') return res.status(404).json({ error: 'Producto no encontrado' });
 
-    const item = carrito.products.find((i) => i.product.toString() === pid);
-    if (item) item.quantity += 1;
-    else carrito.products.push({ product: pid, quantity: 1 });
-
-    await carrito.save();
-    const resultado = await carrito.populate("products.product");
-    res.status(201).json(resultado);
-  } catch (error) {
-    next(error);
-  }
+    res.status(201).json(result);
+  } catch (error) { next(error); }
 }
 
-export async function eliminarProductoDelCarrito(req, res, next) {
+export async function removeProductFromCart(req, res, next) {
   try {
     const { cid, pid } = req.params;
-    const carrito = await Cart.findById(cid);
-    if (!carrito)
-      return res.status(404).json({ error: "Carrito no encontrado" });
+    const result = await cartManager.removeProduct(cid, pid);
 
-    carrito.products = carrito.products.filter(
-      (i) => i.product.toString() !== pid
-    );
-    await carrito.save();
-    res.status(204).send();
-  } catch (error) {
-    next(error);
-  }
+    if (result?.error === 'CART_NOT_FOUND') return res.status(404).json({ error: 'Carrito no encontrado' });
+    if (result?.error === 'PRODUCT_NOT_IN_CART') return res.status(404).json({ error: 'Producto no está en el carrito' });
+
+    res.json(result);
+  } catch (error) { next(error); }
 }
 
-export async function reemplazarProductosDelCarrito(req, res, next) {
+export async function updateAllCartProducts(req, res, next) {
   try {
     const { cid } = req.params;
-    const { products } = req.body;
-    const carrito = await Cart.findByIdAndUpdate(
-      cid,
-      { products: products ?? [] },
-      { new: true, runValidators: true }
-    )
-      .populate("products.product")
-      .lean();
+    const result = await cartManager.updateAllProducts(cid, req.body?.products || []);
 
-    if (!carrito)
-      return res.status(404).json({ error: "Carrito no encontrado" });
-    res.json(carrito);
-  } catch (error) {
-    next(error);
-  }
+    if (result?.error === 'CART_NOT_FOUND') return res.status(404).json({ error: 'Carrito no encontrado' });
+
+    res.json(result);
+  } catch (error) { next(error); }
 }
 
-export async function actualizarCantidad(req, res, next) {
+export async function updateCartProductQuantity(req, res, next) {
   try {
     const { cid, pid } = req.params;
     const { quantity } = req.body;
-    const carrito = await Cart.findById(cid);
-    if (!carrito)
-      return res.status(404).json({ error: "Carrito no encontrado" });
+    const result = await cartManager.updateProductQuantity(cid, pid, quantity);
 
-    const item = carrito.products.find((i) => i.product.toString() === pid);
-    if (!item)
-      return res.status(404).json({ error: "Producto no está en el carrito" });
+    if (result?.error === 'CART_NOT_FOUND') return res.status(404).json({ error: 'Carrito no encontrado' });
+    if (result?.error === 'PRODUCT_NOT_IN_CART') return res.status(404).json({ error: 'Producto no está en el carrito' });
 
-    item.quantity = Math.max(1, Number(quantity) || 1);
-    await carrito.save();
-    const resultado = await carrito.populate("products.product");
-    res.json(resultado);
-  } catch (error) {
-    next(error);
-  }
+    res.json(result);
+  } catch (error) { next(error); }
 }
 
-export async function vaciarCarrito(req, res, next) {
+export async function clearCart(req, res, next) {
   try {
     const { cid } = req.params;
-    const carrito = await Cart.findByIdAndUpdate(
-      cid,
-      { products: [] },
-      { new: true }
-    ).lean();
-    if (!carrito)
-      return res.status(404).json({ error: "Carrito no encontrado" });
-    res.status(204).send();
-  } catch (error) {
-    next(error);
-  }
+    const result = await cartManager.clear(cid);
+
+    if (result?.error === 'CART_NOT_FOUND') return res.status(404).json({ error: 'Carrito no encontrado' });
+
+    res.json(result);
+  } catch (error) { next(error); }
 }

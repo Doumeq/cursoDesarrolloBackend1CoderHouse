@@ -1,94 +1,138 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { ProductManager } from './product.manager.js';
 
-export default class CartManager {
-  constructor(filePath) {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const DATA_DIR = path.resolve(__dirname, '../data');
+const CARTS_FILE = path.join(DATA_DIR, 'carts.json');
+
+async function ensureFile(filePath, defaultValue) {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  try { await fs.access(filePath); }
+  catch { await fs.writeFile(filePath, JSON.stringify(defaultValue, null, 2)); }
+}
+
+export class CartManager {
+  constructor(filePath = CARTS_FILE) {
     this.filePath = filePath;
+    this.productManager = new ProductManager(); 
   }
 
-  async #ensureFile() {
-    try {
-      await fs.access(this.filePath);
-    } catch {
-      await fs.mkdir(path.dirname(this.filePath), { recursive: true });
-      await fs.writeFile(this.filePath, JSON.stringify([], null, 2), 'utf-8');
-    }
+  async init() {
+    await ensureFile(this.filePath, []);
+    await this.productManager.init();
   }
 
-  async #read() {
-    await this.#ensureFile();
+  async readAll() {
     const raw = await fs.readFile(this.filePath, 'utf-8');
     return raw ? JSON.parse(raw) : [];
   }
 
-  async #write(data) {
-    await fs.writeFile(this.filePath, JSON.stringify(data, null, 2), 'utf-8');
+  async writeAll(carritos) {
+    await fs.writeFile(this.filePath, JSON.stringify(carritos, null, 2), 'utf-8');
   }
 
-  async create() {
-    const carts = await this.#read();
-    const nextId = carts.length ? Math.max(...carts.map((c) => Number(c.id))) + 1 : 1;
-    const cart = { id: nextId, products: [] };
-    carts.push(cart);
-    await this.#write(carts);
-    return cart;
+  async createCart() {
+    const carritos = await this.readAll();
+    const nextId = carritos.length ? Math.max(...carritos.map(c => Number(c.id))) + 1 : 1;
+    const nuevo = { id: nextId, products: [] };
+    carritos.push(nuevo);
+    await this.writeAll(carritos);
+    return nuevo;
   }
 
-  async getById(cid) {
-    const carts = await this.#read();
-    return carts.find((c) => String(c.id) === String(cid)) || null;
+  async getById(cartId) {
+    const carritos = await this.readAll();
+    return carritos.find(c => String(c.id) === String(cartId)) || null;
   }
 
-  async addProduct(cid, pid, quantity = 1) {
-    const carts = await this.#read();
-    const idx = carts.findIndex((c) => String(c.id) === String(cid));
-    if (idx === -1) return null;
+  async addProduct(cartId, productId, quantity = 1) {
+    const carrito = await this.getById(cartId);
+    if (!carrito) return { error: 'CART_NOT_FOUND' };
 
-    const existing = carts[idx].products.find((p) => String(p.product) === String(pid));
-    if (existing) existing.quantity += Number(quantity) || 1;
-    else carts[idx].products.push({ product: Number(pid), quantity: Number(quantity) || 1 });
+    const producto = await this.productManager.getById(productId);
+    if (!producto) return { error: 'PRODUCT_NOT_FOUND' };
 
-    await this.#write(carts);
-    return carts[idx];
+    const existente = carrito.products.find(i => String(i.product) === String(productId));
+    if (existente) existente.quantity += Number(quantity) || 1;
+    else carrito.products.push({ product: producto.id, quantity: Number(quantity) || 1 });
+
+    const carritos = await this.readAll();
+    const idx = carritos.findIndex(c => String(c.id) === String(cartId));
+    carritos[idx] = carrito;
+    await this.writeAll(carritos);
+    return carrito;
   }
 
-  async updateAllProducts(cid, productsArray) {
-    const carts = await this.#read();
-    const idx = carts.findIndex((c) => String(c.id) === String(cid));
-    if (idx === -1) return null;
-    carts[idx].products = Array.isArray(productsArray) ? productsArray : [];
-    await this.#write(carts);
-    return carts[idx];
+  async removeProduct(cartId, productId) {
+    const carrito = await this.getById(cartId);
+    if (!carrito) return { error: 'CART_NOT_FOUND' };
+
+    const lenBefore = carrito.products.length;
+    carrito.products = carrito.products.filter(i => String(i.product) !== String(productId));
+
+    if (carrito.products.length === lenBefore) return { error: 'PRODUCT_NOT_IN_CART' };
+
+    const carritos = await this.readAll();
+    const idx = carritos.findIndex(c => String(c.id) === String(cartId));
+    carritos[idx] = carrito;
+    await this.writeAll(carritos);
+    return carrito;
   }
 
-  async updateProductQuantity(cid, pid, quantity) {
-    const carts = await this.#read();
-    const idx = carts.findIndex((c) => String(c.id) === String(cid));
-    if (idx === -1) return null;
+  async updateAllProducts(cartId, itemsArray) {
+    const carrito = await this.getById(cartId);
+    if (!carrito) return { error: 'CART_NOT_FOUND' };
 
-    const item = carts[idx].products.find((p) => String(p.product) === String(pid));
-    if (!item) return null;
+    const normalizados = [];
+    for (const item of itemsArray || []) {
+      const producto = await this.productManager.getById(item.product);
+      if (producto) {
+        normalizados.push({
+          product: producto.id,
+          quantity: Number(item.quantity) || 1
+        });
+      }
+    }
+    carrito.products = normalizados;
+
+    const carritos = await this.readAll();
+    const idx = carritos.findIndex(c => String(c.id) === String(cartId));
+    carritos[idx] = carrito;
+    await this.writeAll(carritos);
+    return carrito;
+  }
+
+  async updateProductQuantity(cartId, productId, quantity) {
+    const carrito = await this.getById(cartId);
+    if (!carrito) return { error: 'CART_NOT_FOUND' };
+
+    const item = carrito.products.find(i => String(i.product) === String(productId));
+    if (!item) return { error: 'PRODUCT_NOT_IN_CART' };
 
     item.quantity = Number(quantity);
-    await this.#write(carts);
-    return carts[idx];
+    if (Number.isNaN(item.quantity) || item.quantity < 1) item.quantity = 1;
+
+    const carritos = await this.readAll();
+    const idx = carritos.findIndex(c => String(c.id) === String(cartId));
+    carritos[idx] = carrito;
+    await this.writeAll(carritos);
+    return carrito;
   }
 
-  async removeProduct(cid, pid) {
-    const carts = await this.#read();
-    const idx = carts.findIndex((c) => String(c.id) === String(cid));
-    if (idx === -1) return null;
-    carts[idx].products = carts[idx].products.filter((p) => String(p.product) !== String(pid));
-    await this.#write(carts);
-    return carts[idx];
-  }
+  async clear(cartId) {
+    const carrito = await this.getById(cartId);
+    if (!carrito) return { error: 'CART_NOT_FOUND' };
 
-  async clearCart(cid) {
-    const carts = await this.#read();
-    const idx = carts.findIndex((c) => String(c.id) === String(cid));
-    if (idx === -1) return null;
-    carts[idx].products = [];
-    await this.#write(carts);
-    return carts[idx];
+    carrito.products = [];
+
+    const carritos = await this.readAll();
+    const idx = carritos.findIndex(c => String(c.id) === String(cartId));
+    carritos[idx] = carrito;
+    await this.writeAll(carritos);
+    return carrito;
   }
 }

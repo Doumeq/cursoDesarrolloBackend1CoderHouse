@@ -1,14 +1,20 @@
-import { httpServer, PORT } from './src/app.js';
 import 'dotenv/config';
-import { conectarMongo } from './src/db/mongo.js';
-import { server, PORT } from './src/server.js';
+import http from 'http';
+import { Server as SocketIOServer } from 'socket.io';
+import app from './src/app.js';
 
-await conectarMongo();
-server.listen(PORT, () => console.log(`HTTP listo en :${PORT}`));
+const PORT = process.env.PORT || 8080;
+const httpServer = http.createServer(app);
+const io = new SocketIOServer(httpServer);
+
+io.on('connection', () => {
+});
 
 httpServer.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`Servidor escuchando en http://localhost:${PORT}`);
 });
+
+
 
 
 //Fuentes de guia

@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
 
-const { MONGODB_URI } = process.env;
-
-export async function conectarMongo() {
-  if (!MONGODB_URI) {
-    throw new Error('Falta la variable MONGODB_URI en .env');
+export default async function connectMongo() {
+  const { MONGO_URL } = process.env;
+  if (!MONGO_URL) {
+    throw new Error('Falta MONGO_URL en .env');
   }
-  await mongoose.connect(MONGODB_URI);
+
+  await mongoose.connect(MONGO_URL);
   console.log('Conectado a MongoDB');
 }
