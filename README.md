@@ -76,4 +76,4 @@ DELETE /api/carts/:cid → vacía carrito
 ```
 
 ## Notas
-Si no llega a conectar a Mongo, revisá MONGO_URL, DB_NAME o dar acceso a todos los IP en MongoDB Atlas.
+Si no llega a conectar a Mongo, revisar MONGO_URL, DB_NAME o dar acceso a todos los IP en MongoDB Atlas.
