@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 const { Schema } = mongoose;
 
-const CartSchema = new Schema(
+const cartSchema = new Schema(
   {
     products: [
       {
@@ -17,4 +17,4 @@ const CartSchema = new Schema(
   { timestamps: true }
 );
 
-export const Cart = mongoose.model("Cart", CartSchema);
+export default mongoose.model("Cart", cartSchema);

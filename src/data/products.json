@@ -1,1 +1,24 @@
-[]
+[
+  {
+    "id": 1,
+    "title": "test",
+    "description": "test",
+    "code": "1",
+    "price": 5,
+    "status": true,
+    "stock": 1,
+    "category": "test",
+    "thumbnails": []
+  },
+  {
+    "id": 2,
+    "title": "test2",
+    "description": "test2",
+    "code": "2",
+    "price": 6,
+    "status": true,
+    "stock": 2,
+    "category": "test2",
+    "thumbnails": []
+  }
+]

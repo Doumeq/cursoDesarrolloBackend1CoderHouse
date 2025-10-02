@@ -1,128 +1,90 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import Product from "../models/product.model.js";
+import mongoose from 'mongoose';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const DATA_DIR = path.resolve(__dirname, '../data');
-const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
-
-async function ensureFile(filePath, defaultValue) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  try { await fs.access(filePath); }
-  catch { await fs.writeFile(filePath, JSON.stringify(defaultValue, null, 2)); }
-}
-
-export class ProductManager {
-  constructor(filePath = PRODUCTS_FILE) {
-    this.filePath = filePath;
-  }
-
-  async init() {
-    await ensureFile(this.filePath, []);
-  }
-
-  async readAll() {
-    const raw = await fs.readFile(this.filePath, 'utf-8');
-    return raw ? JSON.parse(raw) : [];
-  }
-
-  async writeAll(productos) {
-    await fs.writeFile(this.filePath, JSON.stringify(productos, null, 2), 'utf-8');
+class ProductManager {
+  async create(data) {
+    const doc = await Product.create({
+      title: String(data.title ?? "").trim(),
+      description: String(data.description ?? "").trim(),
+      code: String(data.code ?? "").trim(),
+      price: Number(data.price ?? 0),
+      stock: Number(data.stock ?? 0),
+      category: String(data.category ?? "").trim(),
+      status: Boolean(
+        String(data.status).toLowerCase() === "true" ||
+          String(data.status).toLowerCase() === "verdadero" ||
+          data.status === true
+      ),
+    });
+    return doc.toObject();
   }
 
   async getAll({ limit = 10, page = 1, sort, query } = {}) {
-    const productos = await this.readAll();
+    limit = Number(limit) > 0 ? Number(limit) : 10;
+    page = Number(page) > 0 ? Number(page) : 1;
 
-    let filtrados = productos;
+    const filter = {};
     if (query) {
-      const q = String(query).toLowerCase();
-      filtrados = productos.filter(p =>
-        String(p.category).toLowerCase() === q ||
-        String(p.status).toLowerCase() === q
-      );
+      const [k, v] = String(query).split(":");
+      if (k === "category" && v) filter.category = v;
+      if (k === "status" && v !== undefined)
+        filter.status = String(v).toLowerCase() === "true";
     }
 
-    if (sort === 'asc' || sort === 'desc') {
-      filtrados.sort((a, b) => sort === 'asc' ? a.price - b.price : b.price - a.price);
-    }
+    const sortObj = {};
+    if (sort === "asc") sortObj.price = 1;
+    if (sort === "desc") sortObj.price = -1;
 
-    const total = filtrados.length;
-    const totalPages = Math.max(1, Math.ceil(total / Number(limit)));
-    const currentPage = Math.min(Math.max(1, Number(page)), totalPages);
-    const start = (currentPage - 1) * Number(limit);
-    const end = start + Number(limit);
-    const payload = filtrados.slice(start, end);
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await Promise.all([
+      Product.find(filter).sort(sortObj).skip(skip).limit(limit).lean(),
+      Product.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const hasPrevPage = page > 1;
+    const hasNextPage = page < totalPages;
+    const prevPage = hasPrevPage ? page - 1 : null;
+    const nextPage = hasNextPage ? page + 1 : null;
+
+    const link = (p) =>
+      p
+        ? `/api/products?limit=${limit}&page=${p}` +
+          (sort ? `&sort=${sort}` : "") +
+          (query ? `&query=${encodeURIComponent(query)}` : "")
+        : null;
 
     return {
-      payload,
+      status: "success",
+      payload: items,
       totalPages,
-      prevPage: currentPage > 1 ? currentPage - 1 : null,
-      nextPage: currentPage < totalPages ? currentPage + 1 : null,
-      page: currentPage,
-      hasPrevPage: currentPage > 1,
-      hasNextPage: currentPage < totalPages,
+      prevPage,
+      nextPage,
+      page,
+      hasPrevPage,
+      hasNextPage,
+      prevLink: link(prevPage),
+      nextLink: link(nextPage),
     };
   }
 
-  async getById(productId) {
-    const productos = await this.readAll();
-    return productos.find(p => String(p.id) === String(productId)) || null;
+  async update(id, data) {
+    const updated = await Product.findByIdAndUpdate(id, data, {
+      new: true,
+    }).lean();
+    return updated;
   }
 
-  async create(data) {
-    const requeridos = ['title', 'description', 'code', 'price', 'stock', 'category'];
-    const faltantes = requeridos.filter(k => data[k] === undefined);
-    if (faltantes.length) {
-      const error = new Error(`Faltan campos requeridos: ${faltantes.join(', ')}`);
-      error.statusCode = 400;
-      throw error;
-    }
-
-    const productos = await this.readAll();
-    const nextId = productos.length ? Math.max(...productos.map(p => Number(p.id))) + 1 : 1;
-
-    const nuevo = {
-      id: nextId,
-      title: String(data.title),
-      description: String(data.description),
-      code: String(data.code),
-      price: Number(data.price),
-      status: data.status === undefined ? true : Boolean(data.status),
-      stock: Number(data.stock),
-      category: String(data.category),
-      thumbnails: Array.isArray(data.thumbnails) ? data.thumbnails.map(String) : []
-    };
-
-    productos.push(nuevo);
-    await this.writeAll(productos);
-    return nuevo;
+  async delete(id) {
+    await Product.findByIdAndDelete(id);
   }
 
-  async update(productId, parciales) {
-    const productos = await this.readAll();
-    const index = productos.findIndex(p => String(p.id) === String(productId));
-    if (index === -1) return null;
-
-    const safe = { ...parciales };
-    delete safe.id;
-    if ('price' in safe) safe.price = Number(safe.price);
-    if ('stock' in safe) safe.stock = Number(safe.stock);
-    if ('status' in safe) safe.status = Boolean(safe.status);
-    if ('thumbnails' in safe && !Array.isArray(safe.thumbnails)) safe.thumbnails = [];
-
-    productos[index] = { ...productos[index], ...safe };
-    await this.writeAll(productos);
-    return productos[index];
-  }
-
-  async delete(productId) {
-    const productos = await this.readAll();
-    const index = productos.findIndex(p => String(p.id) === String(productId));
-    if (index === -1) return false;
-    productos.splice(index, 1);
-    await this.writeAll(productos);
-    return true;
+  async getById(id) {
+    if (!mongoose.isValidObjectId(id)) return null;
+    return await Product.findById(id).lean();
   }
 }
+
+export default ProductManager;
+export { ProductManager };

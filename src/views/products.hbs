@@ -1,0 +1,58 @@
+<h1>Productos</h1>
+
+<ul class="list">
+  {{#each products}}
+  <li class="card">
+    <div class="actions" style="justify-content:space-between">
+      <div>
+        <strong>{{this.title}}</strong> — ${{this.price}}
+        <span class="badge">| cat: {{this.category}}</span>
+      </div>
+      <div class="actions">
+        <button class="button button--primary add-to-cart" data-pid="{{this._id}}">
+          Agregar al carrito
+        </button>
+        <a class="button button--ghost" href="/products/{{this._id}}">ver detalle</a>
+      </div>
+    </div>
+  </li>
+  {{/each}}
+</ul>
+
+<nav class="actions">
+  {{#if pagination.hasPrevPage}}<a class="button" href="{{pagination.prevLink}}">← Prev</a>{{/if}}
+  <span>Página {{pagination.page}} / {{pagination.totalPages}}</span>
+  {{#if pagination.hasNextPage}}<a class="button" href="{{pagination.nextLink}}">Next →</a>{{/if}}
+</nav>
+
+<script>
+  const CART_ID = localStorage.getItem('cid') || '';
+  document.querySelectorAll('.add-to-cart').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!CART_ID) return alert('Primero crea o selecciona un carrito');
+      const pid = btn.dataset.pid;
+      const res = await fetch(`/api/carts/${CART_ID}/products/${pid}`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ quantity: 1 })
+      });
+      if (!res.ok) alert('No se pudo agregar');
+    });
+  });
+</script>
+
+<script>
+  (async function ensureCart() {
+    let cid = localStorage.getItem('cid');
+    if (!cid) {
+      const r = await fetch('/api/carts', { method: 'POST' });
+      if (!r.ok) { alert('No se pudo crear el carrito'); return; }
+      const data = await r.json();
+      cid = data?.payload?._id;
+      if (cid) localStorage.setItem('cid', cid);
+    }
+    const a = document.getElementById('nav-cart');
+    if (a && cid) a.href = `/carts/${cid}`;
+  })();
+</script>
+

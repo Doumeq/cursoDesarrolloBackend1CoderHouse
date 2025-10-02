@@ -1,0 +1,114 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    color: black;
+    background: #f8fafc;
+    line-height: 1.45;
+}
+
+.container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 16px;
+}
+
+.nav {
+    position: sticky;
+    top: 0;
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 8px 16px;
+}
+
+.nav a {
+    color: blue;
+    text-decoration: none;
+    margin-right: 12px;
+    font-weight: 600;
+}
+
+.nav a:hover {
+    text-decoration: underline;
+}
+
+h1 {
+    margin: 0 0 12px;
+    font-size: 28px;
+}
+
+.list {
+    list-style: disc;
+    padding-left: 20px;
+}
+
+.list li {
+    margin: 12px 0;
+}
+
+.card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.form-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 8px 0;
+}
+
+.input,
+.select {
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: white;
+    min-width: 140px;
+}
+
+.button {
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+}
+
+.button:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+.button--primary {
+    background: blue;
+    border-color: blue;
+    color: white;
+}
+
+.button--danger {
+    background: red;
+    border-color: red;
+    color: white;
+}
+
+.button--ghost {
+    background: transparent;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.badge {
+    font-size: .85rem;
+    color: gray;
+}

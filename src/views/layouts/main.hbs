@@ -4,9 +4,22 @@
     <meta charset="utf-8" />
     <title>{{title}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/css/styles.css" />
+    <link rel="icon" href="/favicon.ico">
   </head>
   <body>
+    <nav style="margin-bottom:1rem">
+      <a href="/products">Productos</a> |
+      <a href="/realtimeproducts">Realtime</a> |
+      <a id="nav-cart" href="#">Mi carrito</a>
+    </nav>
     {{{body}}}
+    <script>
+      (function setCartLink() {
+        const cid = localStorage.getItem('cid');
+        const a = document.getElementById('nav-cart');
+        if (a && cid) a.href = `/carts/${cid}`;
+      })();
+    </script>
   </body>
 </html>

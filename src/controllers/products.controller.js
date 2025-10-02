@@ -1,84 +1,92 @@
-import { ProductManager } from '../managers/product.manager.js';
+import ProductManager from "../managers/product.manager.js";
 
-const productManager = new ProductManager();
-await productManager.init();
+const manager = new ProductManager();
 
-export async function renderHomeView(req, res, next) {
+async function emitProductsUpdate(req) {
+  const io = req.app.get("io");
+  if (!io) return;
+  const data = await manager.getAll({ limit: 50, page: 1 });
+  io.emit("products:updated", data.payload || data);
+}
+
+export const listProducts = async (req, res, next) => {
   try {
     const { limit = 10, page = 1, sort, query } = req.query;
-    const result = await productManager.getAll({ limit, page, sort, query });
-    res.render('home', {
-      title: 'Productos',
-      productos: result.payload,
-      paginacion: {
-        page: result.page,
-        totalPages: result.totalPages,
-        hasPrevPage: result.hasPrevPage,
-        hasNextPage: result.hasNextPage,
-        prevPage: result.prevPage,
-        nextPage: result.nextPage
-      }
-    });
-  } catch (error) { next(error); }
-}
+    const data = await manager.getAll({ limit, page, sort, query });
+    if (data && data.status) return res.json(data);
+    return res.json({ status: "success", payload: data });
+  } catch (e) {
+    next(e);
+  }
+};
 
-export async function renderRealTimeView(req, res, next) {
+export const createProduct = async (req, res, next) => {
   try {
-    const { payload } = await productManager.getAll({ limit: 100, page: 1 });
-    res.render('realTimeProducts', { title: 'Tiempo real', productos: payload });
-  } catch (error) { next(error); }
-}
+    const created = await manager.create(req.body);
+    await emitProductsUpdate(req);
+    res.status(201).json({ status: "success", payload: created });
+  } catch (e) {
+    next(e);
+  }
+};
 
-export async function listProducts(req, res, next) {
+export const updateProduct = async (req, res, next) => {
+  try {
+    const updated = await manager.update(req.params.pid, req.body);
+    await emitProductsUpdate(req);
+    res.json({ status: "success", payload: updated });
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const deleteProduct = async (req, res, next) => {
+  try {
+    await manager.delete(req.params.pid);
+    await emitProductsUpdate(req);
+    res.status(204).end();
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const renderHomeView = async (req, res, next) => {
   try {
     const { limit = 10, page = 1, sort, query } = req.query;
-    const result = await productManager.getAll({ limit, page, sort, query });
+    const data = await manager.getAll({ limit, page, sort, query });
 
-    const base = `${req.protocol}://${req.get('host')}${req.baseUrl}${req.path}`;
-    const mkLink = (p) => p ? `${base}?limit=${limit}&page=${p}${sort ? `&sort=${sort}` : ''}${query ? `&query=${query}` : ''}` : null;
-
-    res.json({
-      status: 'success',
-      payload: result.payload,
-      totalPages: result.totalPages,
-      prevPage: result.prevPage,
-      nextPage: result.nextPage,
-      page: result.page,
-      hasPrevPage: result.hasPrevPage,
-      hasNextPage: result.hasNextPage,
-      prevLink: mkLink(result.prevPage),
-      nextLink: mkLink(result.nextPage),
+    res.render("products", {
+      products: data.payload || data,
+      pagination: {
+        totalPages: data.totalPages ?? 1,
+        page: Number(data.page ?? page),
+        prevLink: data.prevLink ?? null,
+        nextLink: data.nextLink ?? null,
+        hasPrevPage: data.hasPrevPage ?? false,
+        hasNextPage: data.hasNextPage ?? false,
+      },
+      query,
+      sort,
+      limit,
     });
-  } catch (error) { next(error); }
-}
+  } catch (e) {
+    next(e);
+  }
+};
 
-export async function getProductById(req, res, next) {
+export const renderRealTimeView = async (req, res, next) => {
   try {
-    const producto = await productManager.getById(req.params.pid);
-    if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
-    res.json(producto);
-  } catch (error) { next(error); }
-}
+    res.render("realTimeProducts");
+  } catch (e) {
+    next(e);
+  }
+};
 
-export async function createProduct(req, res, next) {
+export const renderProductDetail = async (req, res, next) => {
   try {
-    const creado = await productManager.create(req.body);
-    res.status(201).json(creado);
-  } catch (error) { next(error); }
-}
-
-export async function updateProduct(req, res, next) {
-  try {
-    const actualizado = await productManager.update(req.params.pid, req.body);
-    if (!actualizado) return res.status(404).json({ error: 'Producto no encontrado' });
-    res.json(actualizado);
-  } catch (error) { next(error); }
-}
-
-export async function deleteProduct(req, res, next) {
-  try {
-    const ok = await productManager.delete(req.params.pid);
-    if (!ok) return res.status(404).json({ error: 'Producto no encontrado' });
-    res.status(204).send();
-  } catch (error) { next(error); }
-}
+    const { pid } = req.params;
+    const product = await manager.getById(pid);
+    if (!product) return res.status(404).render('404', { message: 'Producto no encontrado' });
+    res.render('product-detail', { title: product.title, product });
+  } catch (e) { next(e); }
+};
