@@ -86,7 +86,12 @@ export const renderProductDetail = async (req, res, next) => {
   try {
     const { pid } = req.params;
     const product = await manager.getById(pid);
-    if (!product) return res.status(404).render('404', { message: 'Producto no encontrado' });
-    res.render('product-detail', { title: product.title, product });
-  } catch (e) { next(e); }
+    if (!product)
+      return res
+        .status(404)
+        .render("404", { message: "Producto no encontrado" });
+    res.render("product-detail", { title: product.title, product });
+  } catch (e) {
+    next(e);
+  }
 };

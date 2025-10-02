@@ -76,7 +76,12 @@ export const addToCart = async (req, res, next) => {
 export const renderCartView = async (req, res, next) => {
   try {
     const cart = await cm.getByIdPopulated(req.params.cid);
-    if (!cart) return res.status(404).render('404', { message: 'Carrito no encontrado' });
-    res.render('cart', { cart });
-  } catch (e) { next(e); }
+    if (!cart)
+      return res
+        .status(404)
+        .render("404", { message: "Carrito no encontrado" });
+    res.render("cart", { cart });
+  } catch (e) {
+    next(e);
+  }
 };

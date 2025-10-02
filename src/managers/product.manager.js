@@ -1,5 +1,5 @@
 import Product from "../models/product.model.js";
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 class ProductManager {
   async create(data) {
